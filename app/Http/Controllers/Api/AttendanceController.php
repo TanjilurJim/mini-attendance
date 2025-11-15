@@ -41,7 +41,18 @@ class AttendanceController extends Controller
 
     public function monthlyReport(MonthlyReportRequest $request)
     {
-        $data = $this->service->getMonthlyReport($request->month, $request->class);
-        return AttendanceResource::collection($data);
+        $rows = $this->service->getMonthlyReport($request->month, $request->class);
+        // rows is a Collection of Attendance models (with('student'))
+
+        $daily = $rows->groupBy(function ($r) {
+            return $r->date->toDateString();
+        })->mapWithKeys(function ($group, $date) {
+            $present = $group->where('status', 'present')->count();
+            $absent = $group->where('status', 'absent')->count();
+            $late = $group->where('status', 'late')->count();
+            return [$date => ['present' => $present, 'absent' => $absent, 'late' => $late]];
+        });
+
+        return response()->json(['daily_stats' => $daily]);
     }
 }

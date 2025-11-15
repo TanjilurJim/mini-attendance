@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted } from "vue";
-import 'chart.js/auto';
+import "chart.js/auto";
+
 import { Line } from "vue-chartjs";
 import AppLayout from "@/components/AppLayout.vue";
 import api from "@/utils/api";
 
+const selectedClass = ref("");
 const todaySummary = ref(null);
 const monthlyData = ref(null);
 const loading = ref(true);
@@ -64,31 +66,79 @@ async function loadMonthlyReport() {
         const month = String(today.getMonth() + 1).padStart(2, "0");
         const year = today.getFullYear();
 
-        const res = await api.get("/attendance/monthly-report", {
-            params: {
-                month: `${year}-${month}`,
-                class: "8", // or make this dynamic
-            },
-        });
+        const params = { month: `${year}-${month}` };
+        if (selectedClass.value) params.class = selectedClass.value;
 
-        monthlyData.value = res.data;
+        const res = await api.get("/attendance/monthly-report", { params });
 
-        // Process data for chart
-        if (res.data && res.data.daily_stats) {
-            const stats = res.data.daily_stats;
-            chartData.value.labels = Object.keys(stats);
-            chartData.value.datasets[0].data = Object.values(stats).map(
-                (d) => d.present || 0
-            );
-            chartData.value.datasets[1].data = Object.values(stats).map(
-                (d) => d.absent || 0
-            );
-            chartData.value.datasets[2].data = Object.values(stats).map(
-                (d) => d.late || 0
-            );
+        console.log("monthly-report response", res.data);
+
+        const data = res.data || {};
+        const stats = data.daily_stats || {};
+
+        const entries = Object.entries(stats);
+        if (entries.length === 0) {
+            // Reset chart to empty
+            chartData.value = {
+                labels: [],
+                datasets: chartData.value.datasets.map((ds) => ({
+                    ...ds,
+                    data: [],
+                })),
+            };
+            return;
         }
+
+        entries.sort((a, b) => new Date(a[0]) - new Date(b[0]));
+
+        const labels = entries.map((e) => e[0]);
+        const presentArr = entries.map((e) => Number(e[1]?.present ?? 0));
+        const absentArr = entries.map((e) => Number(e[1]?.absent ?? 0));
+        const lateArr = entries.map((e) => Number(e[1]?.late ?? 0));
+
+        const maxVal = Math.max(...presentArr, ...absentArr, ...lateArr, 1);
+
+        // Replace chartData entirely (triggers reactive update)
+        chartData.value = {
+            labels,
+            datasets: [
+                {
+                    label: "Present",
+                    backgroundColor: "#10b981",
+                    borderColor: "#10b981",
+                    data: presentArr,
+                },
+                {
+                    label: "Absent",
+                    backgroundColor: "#ef4444",
+                    borderColor: "#ef4444",
+                    data: absentArr,
+                },
+                {
+                    label: "Late",
+                    backgroundColor: "#f59e0b",
+                    borderColor: "#f59e0b",
+                    data: lateArr,
+                },
+            ],
+        };
+
+        // Ensure y-axis has a reasonable scale so 0/1 values don't compress the plot
+        chartOptions.scales = {
+            y: {
+                beginAtZero: true,
+                suggestedMax: Math.ceil(maxVal * 1.2),
+                ticks: {
+                    stepSize: Math.max(1, Math.ceil(maxVal / 5)),
+                },
+            },
+        };
     } catch (err) {
-        console.error("Failed to load monthly report:", err);
+        console.error(
+            "Failed to load monthly report:",
+            err,
+            err.response?.data || ""
+        );
     }
 }
 
@@ -132,100 +182,106 @@ onMounted(async () => {
             <!-- Dashboard Content -->
             <template v-else>
                 <!-- Today's Summary Stats -->
-                <div
-                    class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
-                >
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <span class="text-3xl">✓</span>
-                                </div>
-                                <div class="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500 truncate"
-                                        >
-                                            Total Present
-                                        </dt>
-                                        <dd
-                                            class="text-3xl font-semibold text-green-600"
-                                        >
-                                            {{ todaySummary?.present || 0 }}
-                                        </dd>
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <span class="text-3xl">✗</span>
-                                </div>
-                                <div class="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500 truncate"
-                                        >
-                                            Total Absent
-                                        </dt>
-                                        <dd
-                                            class="text-3xl font-semibold text-red-600"
-                                        >
-                                            {{ todaySummary?.absent || 0 }}
-                                        </dd>
-                                    </dl>
+                <div class="space-y-6">
+                    <h2 class="text-lg font-medium text-gray-900">Today's Summary</h2>
+                    <div
+                        class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+                    >
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-3xl">✓</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt
+                                                class="text-sm font-medium text-gray-500 truncate"
+                                            >
+                                                Total Present
+                                            </dt>
+                                            <dd
+                                                class="text-3xl font-semibold text-green-600"
+                                            >
+                                                {{ todaySummary?.present || 0 }}
+                                            </dd>
+                                        </dl>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <span class="text-3xl">⏰</span>
-                                </div>
-                                <div class="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500 truncate"
-                                        >
-                                            Late
-                                        </dt>
-                                        <dd
-                                            class="text-3xl font-semibold text-yellow-600"
-                                        >
-                                            {{ todaySummary?.late || 0 }}
-                                        </dd>
-                                    </dl>
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-3xl">✗</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt
+                                                class="text-sm font-medium text-gray-500 truncate"
+                                            >
+                                                Total Absent
+                                            </dt>
+                                            <dd
+                                                class="text-3xl font-semibold text-red-600"
+                                            >
+                                                {{ todaySummary?.absent || 0 }}
+                                            </dd>
+                                        </dl>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <span class="text-3xl">📊</span>
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-3xl">⏰</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt
+                                                class="text-sm font-medium text-gray-500 truncate"
+                                            >
+                                                Late
+                                            </dt>
+                                            <dd
+                                                class="text-3xl font-semibold text-yellow-600"
+                                            >
+                                                {{ todaySummary?.late || 0 }}
+                                            </dd>
+                                        </dl>
+                                    </div>
                                 </div>
-                                <div class="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt
-                                            class="text-sm font-medium text-gray-500 truncate"
-                                        >
-                                            Attendance Rate
-                                        </dt>
-                                        <dd
-                                            class="text-3xl font-semibold text-blue-600"
-                                        >
-                                            {{ todaySummary?.percentage || 0 }}%
-                                        </dd>
-                                    </dl>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-3xl">📊</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt
+                                                class="text-sm font-medium text-gray-500 truncate"
+                                            >
+                                                Attendance Rate
+                                            </dt>
+                                            <dd
+                                                class="text-3xl font-semibold text-blue-600"
+                                            >
+                                                {{
+                                                    todaySummary?.percentage ||
+                                                    0
+                                                }}%
+                                            </dd>
+                                        </dl>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -237,6 +293,20 @@ onMounted(async () => {
                     <h2 class="text-lg font-medium text-gray-900 mb-4">
                         Monthly Attendance Trend
                     </h2>
+                    <div class="flex items-center space-x-2">
+                        <select
+                            v-model="selectedClass"
+                            @change="loadMonthlyReport"
+                            class="px-3 py-1 border rounded"
+                        >
+                            <option value="">All Classes</option>
+                            <option value="6">Class 6</option>
+                            <option value="7">Class 7</option>
+                            <option value="8">Class 8</option>
+                            <option value="9">Class 9</option>
+                            <option value="10">Class 10</option>
+                        </select>
+                    </div>
                     <div class="h-96">
                         <Line :data="chartData" :options="chartOptions" />
                     </div>
