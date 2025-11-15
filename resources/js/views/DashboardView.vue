@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import "chart.js/auto";
-
+import { useToast } from "vue-toastification";
 import { Line } from "vue-chartjs";
 import AppLayout from "@/components/AppLayout.vue";
 import api from "@/utils/api";
@@ -11,7 +11,8 @@ const todaySummary = ref(null);
 const monthlyData = ref(null);
 const loading = ref(true);
 const error = ref(null);
-
+const toast = useToast();
+const generatingReport = ref(false);
 const chartData = ref({
     labels: [],
     datasets: [
@@ -49,6 +50,55 @@ const chartOptions = {
         },
     },
 };
+
+async function generateReport() {
+    try {
+        generatingReport.value = true;
+        toast.info("Generating report...");
+
+        // month and class can be passed dynamically — currently uses this month and all classes
+        const today = new Date();
+        const month = `${today.getFullYear()}-${String(
+            today.getMonth() + 1
+        ).padStart(2, "0")}`;
+
+        const res = await api.get("/attendance/generate-report", {
+            params: {
+                month, // or pass some selected month/class from UI
+                // class: "8"
+            },
+            responseType: "blob",
+        });
+
+        // get filename from header (if provided)
+        const disposition =
+            res.headers["content-disposition"] ||
+            res.headers["Content-Disposition"];
+        let filename = `attendance_${month}.zip`;
+        if (disposition) {
+            const match = /filename="?(.+)"?/.exec(disposition);
+            if (match && match[1]) filename = match[1];
+        }
+
+        const url = window.URL.createObjectURL(
+            new Blob([res.data], { type: res.data.type || "application/zip" })
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        toast.success("Report ready — download started.");
+    } catch (err) {
+        console.error("Generate report error:", err);
+        toast.error("Failed to generate report");
+    } finally {
+        generatingReport.value = false;
+    }
+}
 
 async function loadTodaySummary() {
     try {
@@ -183,7 +233,9 @@ onMounted(async () => {
             <template v-else>
                 <!-- Today's Summary Stats -->
                 <div class="space-y-6">
-                    <h2 class="text-lg font-medium text-gray-900">Today's Summary</h2>
+                    <h2 class="text-lg font-medium text-gray-900">
+                        Today's Summary
+                    </h2>
                     <div
                         class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
                     >
@@ -335,6 +387,21 @@ onMounted(async () => {
                             class="flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                         >
                             Refresh Data
+                        </button>
+                        <button
+                            @click="
+                                $router.push({
+                                    name: 'reports',
+                                    query: {
+                                        month: new Date()
+                                            .toISOString()
+                                            .slice(0, 7),
+                                    },
+                                })
+                            "
+                            class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                        >
+                            Generate / Preview Monthly Report
                         </button>
                     </div>
                 </div>

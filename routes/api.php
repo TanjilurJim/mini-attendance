@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
-
+use App\Http\Controllers\Api\ReportController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -47,6 +47,9 @@ Route::get('/health', function () {
 
 // Protected API routes (require Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('attendance/report', [ReportController::class, 'export']);
+
 
     // Student resource
     Route::apiResource('students', \App\Http\Controllers\Api\StudentController::class);
