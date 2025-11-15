@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StudentRequest;
 use App\Http\Resources\StudentResource;
 use App\Models\Student;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
@@ -24,7 +25,8 @@ class StudentController extends Controller
     }
 
     public function store(StudentRequest $req)
-    {
+    {   
+         Log::debug('STORE STUDENT', ['method'=>request()->method(), 'all'=>request()->all()]);
         $data = $req->validated();
 
         if ($req->hasFile('photo')) {

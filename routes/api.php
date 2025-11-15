@@ -6,7 +6,16 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 
-// --- Public: create personal access token (login) ---
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Simple, token-based routes for the mini-attendance API.
+|
+*/
+
+// Public: create personal access token (login)
 Route::post('/sanctum/token', function (Request $request) {
     $request->validate([
         'email' => 'required|email',
@@ -31,22 +40,22 @@ Route::post('/sanctum/token', function (Request $request) {
     ], 201);
 });
 
-// --- Optional: public route to check health ---
+// Health
 Route::get('/health', function () {
     return response()->json(['ok' => true]);
 });
 
-// --- Protected API routes (require Bearer token) ---
+// Protected API routes (require Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Student resource (CRUD) - controller should exist at App\Http\Controllers\Api\StudentController
-    // Route::apiResource('students', \App\Http\Controllers\Api\StudentController::class);
+    // Student resource
+    Route::apiResource('students', \App\Http\Controllers\Api\StudentController::class);
 
-    // Attendance endpoints - controller should exist at App\Http\Controllers\Api\AttendanceController
-    // Route::post('attendance/bulk', [\App\Http\Controllers\Api\AttendanceController::class, 'storeBulk']);
-    // Route::get('attendance/today-summary', [\App\Http\Controllers\Api\AttendanceController::class, 'todaySummary']);
-    // Route::get('attendance', [\App\Http\Controllers\Api\AttendanceController::class, 'index']);
-    // Route::get('attendance/monthly-report', [\App\Http\Controllers\Api\AttendanceController::class, 'monthlyReport']);
+    // Attendance endpoints
+    Route::post('attendance/bulk', [\App\Http\Controllers\Api\AttendanceController::class, 'storeBulk']);
+    Route::get('attendance/today-summary', [\App\Http\Controllers\Api\AttendanceController::class, 'todaySummary']);
+    Route::get('attendance', [\App\Http\Controllers\Api\AttendanceController::class, 'index']);
+    Route::get('attendance/monthly-report', [\App\Http\Controllers\Api\AttendanceController::class, 'monthlyReport']);
 
     // token revoke endpoints
     Route::post('/sanctum/revoke', function (Request $request) {
