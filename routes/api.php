@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Http\Controllers\Api\ReportController;
@@ -42,6 +43,8 @@ Route::post('/sanctum/token', function (Request $request) {
     ], 201);
 });
 
+  // ** ADD THIS: Broadcasting authentication endpoint **
+    
 // Health
 Route::get('/health', function () {
     return response()->json(['ok' => true]);
@@ -50,7 +53,12 @@ Route::get('/health', function () {
 // Protected API routes (require Bearer token)
 Route::middleware('auth:sanctum')->group(function () {
 
+    Route::post('/broadcasting/auth', function (Request $request) {
+        return Broadcast::auth($request);
+    });
+
     Route::get('attendance/report', [ReportController::class, 'export']);
+
 
 
     // Student resource

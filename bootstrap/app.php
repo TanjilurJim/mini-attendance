@@ -10,6 +10,7 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__ . '/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        channels: __DIR__.'/../routes/channels.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
@@ -18,8 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->api(append: [
-            // If you have custom API middleware, add them here. Otherwise this can be empty.
-            // Example: \App\Http\Middleware\TrimStrings::class,
+            
         ]);
 
         //

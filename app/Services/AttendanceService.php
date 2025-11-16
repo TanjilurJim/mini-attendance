@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
+use App\Events\AttendanceRecorded;
 
 class AttendanceService
 {
@@ -50,6 +51,25 @@ class AttendanceService
         $classes = Student::whereIn('id', $studentIds)->pluck('class')->unique()->toArray();
 
         $this->invalidateMonthlyCacheForMonths($months, $classes);
+
+        /*
+     * Broadcast / dispatch an attendance event so frontend can react in real-time.
+     * Payload is intentionally small so clients can choose to fetch fresh data if needed.
+     */
+        try {
+            $payload = [
+                'class' => $classes[0] ?? 'all',
+                'months' => $months,
+                'count' => count($rows),
+                'sample' => $rows[0] ?? null,
+            ];
+
+            // dispatch the event (will broadcast if the event implements ShouldBroadcast)
+            event(new AttendanceRecorded($payload));
+        } catch (\Throwable $e) {
+            // don't break the main flow on broadcast errors; log for debugging
+            \Log::error('Failed to dispatch AttendanceRecorded event', ['error' => $e->getMessage()]);
+        }
     }
 
     /**
