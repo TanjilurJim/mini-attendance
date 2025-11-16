@@ -64,7 +64,7 @@ class AttendanceService
                 'sample' => $rows[0] ?? null,
             ];
 
-            // dispatch the event (will broadcast if the event implements ShouldBroadcast)
+            // dispatching the event
             event(new AttendanceRecorded($payload));
         } catch (\Throwable $e) {
             // don't break the main flow on broadcast errors; log for debugging
