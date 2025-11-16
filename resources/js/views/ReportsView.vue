@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import AppLayout from "@/components/AppLayout.vue";
+import AppLayout from "@/Components/AppLayout.vue";
 import api from "@/utils/api";
 import { useToast } from "vue-toastification";
 

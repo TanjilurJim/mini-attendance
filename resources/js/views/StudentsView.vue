@@ -142,7 +142,7 @@ onMounted(() => loadStudents());
                         >
                         <select
                             v-model="filters.class"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 "
                         >
                             <option value="">All Classes</option>
                             <option value="6">Class 6</option>

@@ -34,19 +34,62 @@ class GenerateAttendanceReport extends Command
 
     public function handle()
     {
-        $monthArg = $this->argument('month') ?? now()->format('Y-m');
-        $classArg = $this->argument('class') ?: null;
+        $raw = trim((string) $this->argument('month'));
 
-        // Validate month format (Y-m)
-        try {
-            $monthCarbon = Carbon::createFromFormat('Y-m', $monthArg);
-        } catch (\Exception $e) {
-            $this->error("Invalid month format. Expected Y-m (e.g. 2025-11).");
-            return 1;
+        // if no month provided, use current month
+        if ($raw === '') {
+            $monthCarbon = Carbon::now()->startOfMonth();
+        } else {
+            // normalize inputs
+            // 1) YYYY-MM  -> accept
+            // 2) YYYYMM   -> convert to YYYY-MM
+            // 3) MM or M  -> use current year (e.g. "7" => 2025-07)
+            // reject anything else
+
+            if (preg_match('/^\d{4}-\d{2}$/', $raw)) {
+                // e.g. 2025-07
+                try {
+                    $monthCarbon = Carbon::createFromFormat('Y-m', $raw);
+                } catch (\Exception $e) {
+                    $this->error("Invalid month value: {$raw}. Expected YYYY-MM or MM.");
+                    return 1;
+                }
+            } elseif (preg_match('/^\d{6}$/', $raw)) {
+                // e.g. 202507 -> convert to 2025-07
+                $norm = substr($raw, 0, 4) . '-' . substr($raw, 4, 2);
+                try {
+                    $monthCarbon = Carbon::createFromFormat('Y-m', $norm);
+                } catch (\Exception $e) {
+                    $this->error("Invalid month value: {$raw}. Expected YYYYMM, YYYY-MM or MM.");
+                    return 1;
+                }
+            } elseif (preg_match('/^\d{1,2}$/', $raw)) {
+                // e.g. 7 or 07 -> current year + month
+                $monthNum = (int) $raw;
+                if ($monthNum < 1 || $monthNum > 12) {
+                    $this->error("Invalid month number: {$raw}. Must be 1-12.");
+                    return 1;
+                }
+                $year = Carbon::now()->year;
+                $norm = sprintf('%04d-%02d', $year, $monthNum);
+                try {
+                    $monthCarbon = Carbon::createFromFormat('Y-m', $norm);
+                } catch (\Exception $e) {
+                    $this->error("Invalid month value: {$raw}.");
+                    return 1;
+                }
+            } else {
+                $this->error("Invalid month format. Acceptable formats: YYYY-MM, YYYYMM, or MM (uses current year). Example: 2025-11 or 202511 or 11");
+                return 1;
+            }
         }
 
+        // now we have $monthCarbon (start of month). Format for use:
         $month = $monthCarbon->format('Y-m');
-        $labelClass = $classArg ?: 'all';
+        $labelClass = $this->argument('class') ?: 'all';
+        
+        $classArg = $this->argument('class') ?: null;
+     
 
         $timestamp = now()->format('Ymd_His');
         $reportsDir = storage_path('app/reports');

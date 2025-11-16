@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import "chart.js/auto";
 import { useToast } from "vue-toastification";
 import { Line } from "vue-chartjs";
-import AppLayout from "@/components/AppLayout.vue";
+import AppLayout from "@/Components/AppLayout.vue";
 import api from "@/utils/api";
 
 const selectedClass = ref("");
@@ -349,7 +349,7 @@ onMounted(async () => {
                         <select
                             v-model="selectedClass"
                             @change="loadMonthlyReport"
-                            class="px-3 py-1 border rounded"
+                            class="px-3 py-1 border rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none"
                         >
                             <option value="">All Classes</option>
                             <option value="6">Class 6</option>

@@ -41,18 +41,29 @@ class AttendanceController extends Controller
 
     public function monthlyReport(MonthlyReportRequest $request)
     {
-        $rows = $this->service->getMonthlyReport($request->month, $request->class);
-        // rows is a Collection of Attendance models (with('student'))
+        $month = $request->month; // 'YYYY-MM'
+        $class = $request->class;
 
-        $daily = $rows->groupBy(function ($r) {
-            return $r->date->toDateString();
-        })->mapWithKeys(function ($group, $date) {
-            $present = $group->where('status', 'present')->count();
-            $absent = $group->where('status', 'absent')->count();
-            $late = $group->where('status', 'late')->count();
-            return [$date => ['present' => $present, 'absent' => $absent, 'late' => $late]];
-        });
+        $data = $this->service->getMonthlyReportData($month, $class);
 
-        return response()->json(['daily_stats' => $daily]);
+        return response()->json($data);
+    }
+    public function update(Request $req, Attendance $attendance)
+    {
+        $req->validate(['status' => 'required|in:present,absent,late', 'note' => 'nullable|string']);
+
+        $attendance->update([
+            'status' => $req->status,
+            'note'   => $req->note,
+            'recorded_by' => $req->user()->id,
+        ]);
+
+        // Invalidate cache for the month/class of this attendance
+        $month = substr($attendance->date, 0, 7); // 'YYYY-MM'
+        $class = $attendance->student->class ?? null;
+
+        $this->service->invalidateMonthlyCacheForMonths([$month], $class ? [$class] : null);
+
+        return response()->json(['message' => 'Updated']);
     }
 }

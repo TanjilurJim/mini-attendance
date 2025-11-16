@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\AttendanceController;
+use App\Http\Controllers\Api\StudentController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -52,13 +54,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     // Student resource
-    Route::apiResource('students', \App\Http\Controllers\Api\StudentController::class);
+    Route::apiResource('students', StudentController::class);
 
     // Attendance endpoints
-    Route::post('attendance/bulk', [\App\Http\Controllers\Api\AttendanceController::class, 'storeBulk']);
-    Route::get('attendance/today-summary', [\App\Http\Controllers\Api\AttendanceController::class, 'todaySummary']);
-    Route::get('attendance', [\App\Http\Controllers\Api\AttendanceController::class, 'index']);
-    Route::get('attendance/monthly-report', [\App\Http\Controllers\Api\AttendanceController::class, 'monthlyReport']);
+    Route::post('attendance/bulk', [AttendanceController::class, 'storeBulk']);
+    Route::get('attendance/today-summary', [AttendanceController::class, 'todaySummary']);
+    Route::get('attendance', [AttendanceController::class, 'index']);
+    Route::get('attendance/monthly-report', [AttendanceController::class, 'monthlyReport']);
+    Route::patch('attendance/{attendance}', [AttendanceController::class, 'update']);
 
     // token revoke endpoints
     Route::post('/sanctum/revoke', function (Request $request) {
