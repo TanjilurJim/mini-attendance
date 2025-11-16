@@ -144,15 +144,7 @@ Run the development server:
 npm run dev
 ```
 
-In a separate terminal, start the Laravel server:
-```bash
-php artisan serve --host=mini-attendance.test --port=80
-```
 
-Or if not using custom domain:
-```bash
-php artisan serve
-```
 
 ### 8. Access the Application
 
