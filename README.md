@@ -76,7 +76,7 @@ npm install
 
 ### 4. Environment Configuration
 
-1. Use the provided `.env` file in the project root
+1. Use the provided `.env` file in the mail
 
 2. Make sure the following settings are configured:
 
